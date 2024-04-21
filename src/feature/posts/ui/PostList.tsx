@@ -1,11 +1,15 @@
 import { format } from 'date-fns';
+import { compareDesc } from 'date-fns';
 import Link from 'next/link';
 import Balancer from 'react-wrap-balancer';
 
-import { allPosts } from '@/contentlayer/generated';
+import { allPosts, Post } from '@/contentlayer/generated';
 
 export const PostList = () => {
-  const posts = allPosts;
+  const posts: Post[] = allPosts.sort((a, b) => {
+    return compareDesc(new Date(a.date), new Date(b.date));
+  });
+  console.log(allPosts, posts);
   const displayPosts = posts;
 
   return (
