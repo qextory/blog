@@ -2,6 +2,15 @@
 title: 웹 복귀, 이탈 이벤트 감지하기
 date: 2023-09-16
 description: visibilityChange로 웹 페이지의 복귀, 이탈 이벤트를 다뤄보자.
+tags:
+  [
+    '웹 페이지 복귀',
+    '웹 페이지 이탈',
+    '가시성',
+    'visibilityState',
+    'visibilitychange',
+    'React',
+  ]
 ---
 
 ## Overview
@@ -41,7 +50,7 @@ document.onvisibilitychange = (event) => {
 
 React에서 웹 가시성 로직을 구현하기 위해서 `useEffect`를 활용한다.
 
-```ts
+```tsx
 useEffect(() => {
   const handleVisibilityChange = () => {
     // 페이지 복귀
@@ -94,7 +103,7 @@ const usePageVisibility = <VisibilityState>() => {
 };
 ```
 
-```ts title="Usage of usePageVisibility.ts"
+```tsx title="Usage of usePageVisibility.ts"
 const MyComponent = () => {
   const { visibility } = usePageVisibility();
 

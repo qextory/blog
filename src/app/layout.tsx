@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     creator: '@qextory',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/logo.svg',
     shortcut: '/favicon-16x16.png',
     apple: '/apple-touch-icon.png',
   },

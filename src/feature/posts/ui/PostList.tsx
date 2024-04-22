@@ -9,7 +9,6 @@ export const PostList = () => {
   const posts: Post[] = allPosts.sort((a, b) => {
     return compareDesc(new Date(a.date), new Date(b.date));
   });
-  console.log(allPosts, posts);
   const displayPosts = posts;
 
   return (

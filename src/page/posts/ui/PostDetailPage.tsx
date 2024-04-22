@@ -1,15 +1,19 @@
 import { ChevronRightIcon } from '@radix-ui/react-icons';
 import Balancer from 'react-wrap-balancer';
 
+import { Post } from '@/contentlayer/generated';
 import { cn } from '@/shared/lib';
+import { getTableOfContents } from '@/shared/lib/toc';
 import { ScrollArea } from '@/shared/ui';
 import { Mdx } from '@/widgets/mdx-components';
+import { TOCSidebar } from '@/widgets/sidebar-toc';
 
-import { Post } from '.contentlayer/generated/types';
 // import { docsConfig } from '@/shared/config';
 // import { PostsSidebarNav } from '@/widgets/sidebar-nav';
 
-const PostDetailPage = ({ post }: { post: Post }) => {
+const PostDetailPage = async ({ post }: { post: Post }) => {
+  const toc = await getTableOfContents(post.body.raw);
+
   return (
     <div className='container flex-1 items-start md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10'>
       {/* <aside className='fixed top-14 z-30 -ml-2 hidden h-[calc(100vh-3.5rem)] w-full shrink-0 md:sticky md:block'>
@@ -47,13 +51,7 @@ const PostDetailPage = ({ post }: { post: Post }) => {
             <Mdx code={post.body.code} />
           </div>
         </div>
-        <div className='hidden text-sm xl:block'>
-          <div className='sticky top-16 -mt-10 pt-4'>
-            <ScrollArea className='pb-10'>
-              <div className='sticky top-16 -mt-10 h-[calc(100vh-3.5rem)] py-12'></div>
-            </ScrollArea>
-          </div>
-        </div>
+        <TOCSidebar toc={toc} />
       </main>
     </div>
   );

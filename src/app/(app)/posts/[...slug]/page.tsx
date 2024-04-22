@@ -44,7 +44,7 @@ export function generateMetadata({ params }: PostPageProps): Metadata {
         {
           url: siteConfig.ogImage,
           width: 1200,
-          height: 630,
+          height: 600,
           alt: siteConfig.name,
         },
       ],
@@ -57,7 +57,7 @@ export function generateMetadata({ params }: PostPageProps): Metadata {
         {
           url: siteConfig.ogImage,
           width: 1200,
-          height: 630,
+          height: 600,
           alt: siteConfig.name,
         },
       ],
@@ -72,7 +72,7 @@ export function generateStaticParams(): PostPageProps['params'][] {
   }));
 }
 
-const Page = ({ params }: PostPageProps) => {
+const Page = async ({ params }: PostPageProps) => {
   const post = getPostFromParams({ params });
 
   if (!post) {
