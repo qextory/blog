@@ -10,7 +10,6 @@ import { ScrollArea } from '@/shared/ui';
 export const TOCSidebar = ({ toc }: { toc: Toc }) => {
   const itemIds = useMemo(() => {
     return toc.flatMap((item) => {
-      // URL에서 "#" 문자 뒤의 부분을 추출하여 아이템 ID 생성
       const itemId = item.url.split('#')[1];
       return itemId ? [itemId] : [];
     });
@@ -56,7 +55,6 @@ const useActiveItem = (itemIds: string[]) => {
 
     itemIds.forEach((id) => {
       const element = document.getElementById(id);
-      console.log('HERE', element);
       if (element) {
         observer.observe(element);
       }
@@ -81,12 +79,16 @@ interface TreeProps {
   activeItem: string | null;
 }
 
-const Tree = ({ tree, level = 1, activeItem }: TreeProps) => {
-  return tree?.length && level < 3 ? (
-    <ul className={cn('m-0 list-none', { 'pl-4': level !== 1 })}>
+const Tree = ({ tree, activeItem }: TreeProps) => {
+  const minDepth = Math.min(...tree.map((item) => item.depth));
+  return tree?.length ? (
+    <ul className={cn('m-0 list-none')}>
       {tree.map((item, index) => {
         return (
-          <li key={index} className={cn('mt-0 pt-2')}>
+          <li
+            key={index}
+            className={cn('mt-0 pt-2')}
+            style={{ marginLeft: (item.depth - minDepth) * 10 }}>
             <a
               href={item.url}
               className={cn(
@@ -97,9 +99,6 @@ const Tree = ({ tree, level = 1, activeItem }: TreeProps) => {
               )}>
               {item.value}
             </a>
-            {/* {item.items?.length ? (
-              <Tree tree={item} level={level + 1} activeItem={activeItem} />
-            ) : null} */}
           </li>
         );
       })}
