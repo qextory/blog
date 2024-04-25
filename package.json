@@ -40,6 +40,7 @@
   "devDependencies": {
     "@shikijs/compat": "^1.1.7",
     "@svgr/webpack": "^8.1.0",
+    "@types/gtag.js": "^0.0.19",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

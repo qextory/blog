@@ -8,6 +8,7 @@ import { siteConfig } from '@/shared/config';
 import { cn } from '@/shared/lib';
 
 import { ThemeProvider } from './_providers';
+import GoogleAnalytics from './_providers/google-analytics';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -89,6 +90,7 @@ const RootLayout = ({ children }: PropsWithChildren) => {
           'min-h-screen bg-background font-sans antialiased',
           inter.className
         )}>
+        {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics />}
         <ThemeProvider
           attribute='class'
           defaultTheme='system'
