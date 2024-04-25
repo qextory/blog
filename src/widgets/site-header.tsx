@@ -1,10 +1,10 @@
-import Link from 'next/link';
+// import Link from 'next/link';
 
-import { siteConfig } from '@/shared/config';
-import { cn } from '@/shared/lib';
-import { buttonVariants, Icons } from '@/shared/ui';
+// import { siteConfig } from '@/shared/config';
+// import { cn } from '@/shared/lib';
+// import { buttonVariants, Icons } from '@/shared/ui';
 
-import { CommandMenu } from './command-menu';
+// import { CommandMenu } from './command-menu';
 import { MainNav } from './main-nav';
 import { MobileNav } from './mobile-nav';
 import { ModeToggle } from './mode-toggle';
@@ -16,11 +16,11 @@ const SiteHeader = () => {
         <MainNav />
         <MobileNav />
         <div className='flex flex-1 items-center justify-between space-x-2 md:justify-end'>
-          <div className='w-full flex-1 md:w-auto md:flex-none'>
+          {/* <div className='w-full flex-1 md:w-auto md:flex-none'>
             <CommandMenu />
-          </div>
+          </div> */}
           <nav className='flex items-center'>
-            <Link href={siteConfig.links.github} target='_blank' rel='noreferrer'>
+            {/* <Link href={siteConfig.links.github} target='_blank' rel='noreferrer'>
               <div
                 className={cn(
                   buttonVariants({
@@ -31,7 +31,7 @@ const SiteHeader = () => {
                 <Icons.gitHub className='h-4 w-4' />
                 <span className='sr-only'>GitHub</span>
               </div>
-            </Link>
+            </Link> */}
             <ModeToggle />
           </nav>
         </div>

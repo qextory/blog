@@ -6,10 +6,10 @@ import { gtag } from '@/shared/lib';
 
 export default function GoogleAnalytics() {
   gtag.useGtag();
-  console.log(process.env.NODE_ENV);
+
   return (
     <>
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV !== 'development' && (
         <>
           <Script
             strategy='afterInteractive'
