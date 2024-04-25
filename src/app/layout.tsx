@@ -1,5 +1,6 @@
 import '@/app/_styles/globals.css';
 
+import { GoogleTagManager } from '@next/third-parties/google';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { PropsWithChildren } from 'react';
@@ -8,7 +9,6 @@ import { siteConfig } from '@/shared/config';
 import { cn } from '@/shared/lib';
 
 import { ThemeProvider } from './_providers';
-import GoogleAnalytics from './_providers/google-analytics';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -82,15 +82,17 @@ export const viewport: Viewport = {
   ],
 };
 
+const GTM_ID = process.env.GTM_ID as string;
+
 const RootLayout = ({ children }: PropsWithChildren) => {
   return (
     <html lang='ko' suppressHydrationWarning>
+      <GoogleTagManager gtmId={GTM_ID} />
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased',
           inter.className
         )}>
-        {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics />}
         <ThemeProvider
           attribute='class'
           defaultTheme='system'
