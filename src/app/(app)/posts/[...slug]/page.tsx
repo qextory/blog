@@ -1,4 +1,4 @@
-import '@/app/_styles/mdx.css';
+import '@/shared/config/mdx.css';
 
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -14,7 +14,7 @@ interface PostPageProps {
   };
 }
 
-const getPostFromParams = ({ params }: PostPageProps) => {
+const getPostFromParams = async ({ params }: PostPageProps) => {
   const slug = params.slug?.join('/') || '';
   const post = allPosts.find((post) => post.slugAsParams === slug);
 
@@ -25,8 +25,8 @@ const getPostFromParams = ({ params }: PostPageProps) => {
   return post;
 };
 
-export function generateMetadata({ params }: PostPageProps): Metadata {
-  const post = getPostFromParams({ params });
+export const generateMetadata = async ({ params }: PostPageProps): Promise<Metadata> => {
+  const post = await getPostFromParams({ params });
 
   if (!post) {
     return {};
@@ -48,10 +48,11 @@ export function generateMetadata({ params }: PostPageProps): Metadata {
           alt: siteConfig.name,
         },
       ],
+      locale: siteConfig.locale,
     },
     twitter: {
-      card: 'summary_large_image',
       title: post.title,
+      card: 'summary_large_image',
       description: post.description,
       images: [
         {
@@ -64,16 +65,16 @@ export function generateMetadata({ params }: PostPageProps): Metadata {
       creator: '@qextory',
     },
   };
-}
+};
 
-export function generateStaticParams(): PostPageProps['params'][] {
+export const generateStaticParams = async (): Promise<PostPageProps['params'][]> => {
   return allPosts.map((post) => ({
     slug: post.slugAsParams.split('/'),
   }));
-}
+};
 
 const Page = async ({ params }: PostPageProps) => {
-  const post = getPostFromParams({ params });
+  const post = await getPostFromParams({ params });
 
   if (!post) {
     notFound();

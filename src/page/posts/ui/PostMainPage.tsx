@@ -1,5 +1,3 @@
-'use client';
-
 import { PostList } from '@/feature/posts';
 import { ScrollArea } from '@/shared/ui';
 

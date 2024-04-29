@@ -1,14 +1,15 @@
-import '@/app/_styles/globals.css';
+import '@/shared/config/globals.css';
 
 import { GoogleTagManager } from '@next/third-parties/google';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import Head from 'next/head';
 import { PropsWithChildren } from 'react';
 
 import { siteConfig } from '@/shared/config';
 import { cn } from '@/shared/lib';
 
-import { ThemeProvider } from './_providers';
+import { Provider } from './_providers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -19,7 +20,15 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(siteConfig.url),
   description: siteConfig.description,
-  keywords: ['Blog', 'React', 'Tailwind CSS', 'Frontend', 'Radix UI', 'Shadcn/ui'],
+  keywords: [
+    'qextory',
+    'Blog',
+    'React',
+    'Tailwind CSS',
+    'Frontend',
+    'Radix UI',
+    'Shadcn/ui',
+  ],
   authors: [
     {
       name: 'qextory',
@@ -87,13 +96,16 @@ const GTM_ID = process.env.GTM_ID as string;
 const RootLayout = ({ children }: PropsWithChildren) => {
   return (
     <html lang='ko' suppressHydrationWarning>
+      <Head>
+        <link rel='icon' href='/logo.svg' />
+      </Head>
       <GoogleTagManager gtmId={GTM_ID} />
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased',
           inter.className
         )}>
-        <ThemeProvider
+        <Provider
           attribute='class'
           defaultTheme='system'
           enableSystem
@@ -101,7 +113,7 @@ const RootLayout = ({ children }: PropsWithChildren) => {
           <div className='relative flex min-h-screen flex-col bg-background'>
             {children}
           </div>
-        </ThemeProvider>
+        </Provider>
       </body>
     </html>
   );
