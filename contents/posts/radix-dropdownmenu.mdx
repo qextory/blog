@@ -1,0 +1,162 @@
+---
+title: Dropdownmenu Trigger 내부에서 트리거 막기 - Radix UI
+date: 2024-04-29
+description: Dropdownmenu 트리거 내부 요소에서 트리거링 막기
+tags: ['Radix UI', 'Dropdownmenu', 'Trigger', 'React', 'Shadcn']
+---
+
+## Overview
+
+요즘 shadcn/ui를 잘 활용하고 있다.
+shadcn/ui는 Radix Primitives를 사용하여 만들어졌으며 컴포넌트를 install하는 방식이라 확장성이 좋다.
+또한 Radix Primitives는 WAI-ARIA UI 패턴[^1]과 비슷하게 만들었기 때문에 접근성 높은 디자인 시스템 구축에 용이하다.
+
+shadcn/ui를 사용하면서 크고 작은 이슈를들 겪고 있는데, 그 중 Radix와 관련된 이슈를 하나 공유한다.
+
+[^1]: https://www.radix-ui.com/primitives/docs/overview/introduction#vision
+
+## DropdownMenu 트리거링 문제
+
+shadcn/ui를 사용한 프로젝트 중 드롭다운 메뉴가 필요한 상황이 생겼다.
+아래와 같이 댓글 영역을 클릭 시 드롭다운 메뉴가 열리고 댓글 수정/삭제 동작을 가능하도록 하는 것이다.
+
+<AspectRatio ratio={16 / 9} className='my-4 overflow-hidden'>
+  <Image
+    src='https://bucket-zifafi.s3.ap-northeast-2.amazonaws.com/posts/dropdownmenu-01.png'
+    alt='Image'
+    width='400'
+    height='400'
+    className='mx-auto rounded-md object-cover'
+  />
+</AspectRatio>
+
+명령어 `npx shadcn-ui@latest add dropdown-menu`를 통해 드롭다운 컴포넌트를 생성하고 합성 컴포넌트 방식으로 쉽게 만들 수 있었다.
+`DropdownMenu` 컴포넌트 내부에 메뉴의 열림 상태와 핸들러가 내장되어 있어서 사용자는 보여지는 UI만 신경쓰면 된다.
+이것이 합성 컴포넌트 방식의 가장 큰 장점이라고 생각했다.
+
+그런데 댓글의 요소들 중 "답글 달기" 버튼을 클릭하는 경우는 메뉴가 열리는 것이 아니고, 답글 작성을 위한 액션이 이루어져야했다.
+답글 달기 텍스트 버튼에 클릭 이벤트를 설정해주어도 이벤트 전파가 발생하여 메뉴가 자꾸 open 되었다.
+
+이벤트 전파를 막아볼까? 드롭다운 open 관련 로직을 외부로 노출시켜서 controllable하게 바꿔주어야하나?
+여러 방법들이 떠올랐고 근본적인 원인을 파헤쳐보았다.
+
+## 원인은 이벤트 버블링?
+
+웹 브라우저에서는 중첩된 요소들에 마우스 클릭 같은 이벤트가 발생하면 가장 최상단 요소까지 해당 이벤트가 전파되는 특성이 있다.
+이를 다른 말로 이벤트 버블링이라고도 하는데, 이벤트가 깊은 요소부터 올라오는 모습이 거품이 올라오는 모습 같기 때문이라고 한다.
+
+아무튼 이벤트가 전파되는 현상이기 때문에 대수롭지 않게 `event.stopPropagation()` 코드를 추가해주었다.
+작성한 코드는 아래와 같은 구조였다. 예상되는 동작은 메뉴가 열리지 않는 것이었다.
+
+```tsx {7}
+const Comment = () => {
+  <DropdownMenu>
+    <DropdownMenuTrigger>
+      <CommentThingsComponents />
+      <ReplyButton
+        onClick={(e) => {
+          e.stopPropagation();
+          addReply();
+        }}>
+        답글달기
+      </ReplyButton>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      <DropdownMenuItem />
+      <DropdownMenuItem />
+    </DropdownMenuContent>
+  </DropdownMenu>;
+};
+```
+
+하지만 여전히 메뉴가 열렸다. 심지어 `onClick` 이벤트도 간헐적으로 실행되었다.
+shadcn/ui document를 살펴보아도 간단한 예시뿐이었고 트리거링을 막는 방법은 소개되어 있지 않았다.
+드롭다운 열고 닫는 로직을 밖으로 꺼내는 것은 너무 싫었다.
+그리고 이벤트 버블링 현상이 아니면 도대체 무슨 문제인지 궁금했다.
+그래서 dependency 라이브러리인 `@radix-ui`의 `dropdown-menu`를 파헤쳤다.
+
+> [radix-ui dropdownmenu](https://www.radix-ui.com/primitives/docs/components/dropdown-menu)
+
+## 아주 간단했던 원인
+
+radix-ui primitives의 `DropdownMenu.Content` 문서에 의하면 `prop`은 `asChild`밖에 없었고 API Reference도 특별한 옵션이 없었다.
+그렇게 나는 트리거를 어떻게 만들었는지 확인하려고 코드 구현단까지 들어갔고 원인을 찾았다.
+
+어렵지 않은 문제라고 생각했다가 꽤 성가시게 느끼던 참이었는데, 드롭다운 트리거를 보고 허무함을 느꼈다. [코드](https://github.com/radix-ui/primitives/blob/b32a93318cdfce383c2eec095710d35ffbd33a1c/packages/react/dropdown-menu/src/DropdownMenu.tsx#L99C1-L141C48)는 다음과 같았다.
+
+```tsx {9}
+const DropdownMenuTrigger = React.forwardRef<
+  // ...
+>((props: ScopedProps<DropdownMenuTriggerProps>, forwardedRef) => {
+  // ...
+  return (
+    <MenuPrimitive.Anchor asChild {...menuScope}>
+      <Primitive.button
+        // ...
+        onPointerDown={composeEventHandlers(props.onPointerDown, (event) => {
+          // only call handler if it's the left button (mousedown gets triggered by all mouse buttons)
+          // but not when the control key is pressed (avoiding MacOS right click)
+          if (!disabled && event.button === 0 && event.ctrlKey === false) {
+            context.onOpenToggle();
+            // prevent trigger focusing when opening
+            // this allows the content to be given focus without competition
+            if (!context.open) event.preventDefault();
+          }
+        })}
+      />
+    </MenuPrimitive.Anchor>
+  );
+});
+```
+
+`onClick` 이벤트가 설정되어 있지 않다. `onPointerDown` 이벤트를 통해서 드롭다운 메뉴를 열 수 있도록 구현되어 있었다.
+**답글 달기** 버튼에 `onClick` 이벤트를 `onPointerDown`로 바꾼 뒤 `e.stopPropagation()`를 추가해주었더니 메뉴가 열리지 않았다.
+
+즉, 서로 다른 이벤트라서 의도대로 동작하지 않았다.
+작은 문제였지만 shadcn/ui를 사용할때 `radix-ui/primitives` repository를 켜놓고 개발하는 습관이 생긴 계기가 되었다.
+
+> 다른 라이브러리를 사용할 때에도 마찬가지
+
+## Prevent Triggering 코드 재사용하기
+
+트리거 컴포넌트 내부에서 트리거를 방지하는 컴포넌트를 만들어서 다른 곳에서 활용해보자.
+`e.stopPropagation()`를 일일이 사용하지 않고 합성 컴포넌트 형태로 만드는 것이 목표이다.
+
+```tsx title="DropdownMenu.tsx"
+const DropdownMenuTriggerPrevent = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => {
+  return (
+    <div
+      className={className}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+      }}
+      {...props}
+    />
+  );
+};
+DropdownMenuTriggerPrevent.displayName = 'DropdownMenuTriggerPrevent';
+```
+
+```tsx {5, 7}
+const Comment = () => {
+  <DropdownMenu>
+    <DropdownMenuTrigger>
+      <CommentThingsComponents />
+      <DropdownMenuTriggerPrevent>
+        <ReplyButton>답글달기</ReplyButton>
+      </DropdownMenuTriggerPrevent>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      <DropdownMenuItem />
+      <DropdownMenuItem />
+    </DropdownMenuContent>
+  </DropdownMenu>;
+};
+```
+
+이제 `<DropdownMenuTriggerPrevent />`를 감싸준 부분은 트리거링 이벤트가 발생하지 않는다.
+
+<br />
