@@ -1,6 +1,6 @@
 import { forwardRef, ForwardRefExoticComponent, HTMLAttributes } from 'react';
 
-import { cn } from '@/shared/lib';
+import { cn } from '../lib';
 
 interface CardProps extends ForwardRefExoticComponent<HTMLAttributes<HTMLDivElement>> {
   Header: typeof CardHeader;
