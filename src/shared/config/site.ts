@@ -5,7 +5,7 @@ export const siteConfig = {
   ogImage: '/images/qextory-banner.png',
   description: 'Dive into a realm of boundless creativity with Qextory!',
   links: {
-    github: 'https://github.com/qexxep',
+    github: 'https://github.com/qextory',
   },
   locale: 'ko_KR',
 };
