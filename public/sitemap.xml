@@ -8,19 +8,49 @@
 
 
 <url>
-  <loc>http://www.qextory.com/</loc>
-  <lastmod>2024-04-25T05:32:06+00:00</lastmod>
+  <loc>https://www.qextory.com/</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
   <priority>1.00</priority>
 </url>
 <url>
-  <loc>http://www.qextory.com/posts</loc>
-  <lastmod>2024-04-25T05:32:06+00:00</lastmod>
+  <loc>https://www.qextory.com/posts</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
   <priority>0.80</priority>
 </url>
 <url>
-  <loc>http://www.qextory.com/posts/visibilityState</loc>
-  <lastmod>2024-04-25T05:32:06+00:00</lastmod>
-  <priority>0.64</priority>
+  <loc>https://www.qextory.com/posts/rust-format-on-save</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.qextory.com/posts/optimistic-ui</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.qextory.com/posts/submodule</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.qextory.com/posts/lint-staged-and-tsc</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.qextory.com/posts/law-of-ux</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.qextory.com/posts/radix-dropdownmenu</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://www.qextory.com/posts/visibilityState</loc>
+  <lastmod>2024-11-02T05:14:46+00:00</lastmod>
+  <priority>0.80</priority>
 </url>
 
 
