@@ -1,0 +1,114 @@
+---
+title: 서브모듈을 활용한 코드 부분 은닉화
+date: 2024-05-27
+description: 특정 코드를 비공개로 전환하거나 모듈로 분리하여 따로 관리하는 방법
+tags: ['submodule', 'git', '은닉화', '코드 가리기', '블로그 글 가리기', 'contentlayer']
+---
+
+## Overview
+
+이 블로그는 Next.js를 사용해서 SSG 방식으로 배포된 사이트이다.
+개발 히스토리는 GitHub 저장소에서 확인할 수 있다.
+게시물 관리는 일반적으로 사용하는 다른 기술 블로그들처럼 contentlayer로 관리한다.
+
+그런데 블로그 포스트 데이터 즉, mdx 파일이 저장소에서 노출되는게 싫었다.
+또한 블로그 기능 개발과 포스팅 작업이 동시에 이루어져서 컨텐츠를 분리하고 싶었다.
+
+그래서 git submodule 기능을 이용하여 컨텐츠를 다른 레파지토리로 분리시킨 경험을 정리하려고 한다.
+
+## 서브모듈이란
+
+Git의 도구들 중에 [서브모듈](https://git-scm.com/book/ko/v2/Git-%EB%8F%84%EA%B5%AC-%EC%84%9C%EB%B8%8C%EB%AA%A8%EB%93%88)이라는 기능이 있다.
+서브모듈은 Git 저장소 안에 다른 Git 저장소를 디렉토리로 분리해 넣는 것을 말한다.
+독립된 다른 저장소를 내 저장소에 클론하고 커밋은 따로 관리할 수 있다.
+
+그래서 이 기능을 활용하여 "blog"라는 저장소에서 contents라는 폴더에 들어있던 포스팅 관련 mdx 파일들을 분리하였다.
+"contents"라는 분리된 독립 저장소는 따로 git history를 가지고 있으며 또한 private 설정을 추가하여 코드를 은닉화 할 수 있었다.
+
+## 서브모듈 적용 과정
+
+### 1. 독립 저장소 생성하기
+
+<Image
+  src='https://bucket-zifafi.s3.ap-northeast-2.amazonaws.com/posts/submodule_private.png'
+  alt='Image'
+  width='300'
+  height='150'
+  className='mx-auto rounded-md object-cover'
+/>
+
+위와 같이 새로운 repository를 생성하고 private 설정을 해주었다.
+
+### 2. 작업 환경에서 서브모듈 추가하기
+
+메인 저장소에서 아래 명령어로 추가하려고 하는 저장소를 서브모듈로 추가할 수 있다.
+
+```bash
+git submodule add <서브모듈로 추가할 저장소의 url>
+```
+
+성공적으로 추가가 되었다면 .gitmodules라는 파일이 생성된다.
+
+```bash
+[submodule "contents"]
+	path = contents
+	url = https://github.com/qextory/contents
+```
+
+이 파일을 통해 어떤 서브모듈들이 추가되었는지 알 수 있다.
+
+### 3. 원격 저장소에 업데이트
+
+```bash
+git add .
+git push origin main
+```
+
+로컬 작업 환경에서 서브모듈 추가했다.
+그리고 해당 변경 사항을 원격 저장소로 `push`를 한 뒤 깃헙 저장소에서 확인하면 아래와 같이 서브모듈이 반영된 것을 볼 수 있다.
+
+<Image
+  src='https://bucket-zifafi.s3.ap-northeast-2.amazonaws.com/posts/submodule_contents.png'
+  alt='Image'
+  width='300'
+  height='150'
+  className='mx-auto rounded-md object-cover'
+/>
+
+### 4. 배포 환경에서 서브모듈 반영하기
+
+원격 저장소에 서브모듈이 잘 반영되었으니, 배포 환경에 접속하여 서브모듈 변경 사항을 반영한다.
+서브모듈을 포함하고 있는 프로젝트를 클론하거나 `pull` 받는 방법은 아래와 같다.
+
+```bash
+git submodule init
+git submodule update
+```
+
+첫번째 명령어 `git submodule init`은 `.gitmodules` 파일에 정의된 서브모듈의 초기 설정을 로컬 Git 환경에 복사한다.
+그리고 이 정보를 `.git/config` 파일에 추가하여 로컬 설정을 준비한다.
+이때에는 서브모듈의 데이터를 가져오지는 않고, 두번째 명령어 `update`를 실행해주어야 한다.
+
+`git submodule update`를 실행하면 서브모듈의 리모트 저장소에서 데이터를 가져온다.
+그렇게 서브모듈을 포함한 최신 변경 사항을 반영 할 수 있다.
+
+## 서브모듈 활용성
+
+서브모듈 기능을 활용하여 컨텐츠 폴더를 private으로 은닉화 할 수 있었다.
+그리고 블로그 기능 개발과 컨텐츠 작성 커밋 히스토리를 분리하여 관리 할 수 있다.
+
+이처럼 서브모듈은 프로젝트를 모듈 단위로 분리시킬 수 있다.
+그러면 공통적으로 사용하는 UI 라이브러리나 유틸리티 함수 모음을 모듈화하여 코드 재사용성을 높일 수 있다.
+모노레포로의 전환이 고민된다면 서브모듈도 충분히 고려해볼 수 있지 않을까?
+
+또한 이번 경우처럼 외부로 노출시키기 꺼려지거나 민감한 데이터를 따로 관리할 수 있다.
+개발팀에서 공통적으로 사용되는 secret key들을 모아둔 레포를 모듈로 분리하면 될 것이다.
+
+하지만 단점으로는 워크플로우가 조금 복잡해지는 것이다.
+팀 구성원들이 서브모듈 사용법을 숙지해야하고 서브모듈 커밋 관리의 실수가 발생하기 쉽기 때문이다.
+
+그럼에도 불구하고 현재 상황을 고려해서 서브모듈을 적절히 잘 활용한다면 충분히 좋은 선택지라고 생각한다.
+
+## Reference
+
+- https://git-scm.com/book/en/v2/Git-Tools-Submodules

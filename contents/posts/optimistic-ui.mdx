@@ -1,0 +1,429 @@
+---
+title: react-query와 함께 낙관적으로 UX 개선하기
+date: 2024-06-20
+description: 리액트쿼리로 낙관적 UI 구현하면서 겪은 일
+tags:
+  [
+    'Optimistic UI',
+    '낙관적',
+    'like',
+    '좋아요',
+    '인스타그램',
+    'react',
+    'react-query',
+    'tanstack-query',
+  ]
+---
+
+## Overview
+
+결과적으로 Optimistic UI를 구현하여 UX를 크게 개선하였다.
+
+사용자 경험을 만족시키기 위해서 1차원적으로 생각할 수 있는 방법들은 보통 높은 기술력이나 리소스를 필요로한다.
+하지만 거울을 설치하여 엘레베이터 속도에 대한 탑승자의 불만을 잠재웠다는 이야기도 있듯이 작은 아이디어만으로도 큰 효과를 발휘할 수 있다.
+
+웹 사이트나 서비스에서도 이러한 기법들이 있다.
+그 중 **Optimistic UI**, 즉 낙관적 업데이트를 통한 UI를 제공하는 기법을 사용할 기회가 있었다.
+`React`와 `Tanstack Query` 기반 프로젝트에서 UX를 크게 개선한 경험을 소개한다.
+
+## 너무 느린 좋아요 클릭 속도 문제
+
+최근 개발하고 있던 서비스 QA를 하던 중 **좋아요 클릭 속도가 너무 느리다**는 이슈가 발생했다.
+언제나 그렇듯 프로젝트 막바지에 항상 바쁜 프론트엔드 특성 상 디테일하게 고려하지 못하고 넘겼던 부분이었다.
+
+해당 기능은 서비스 사용자가 게시물 인터랙션을 위한 좋아요 클릭 동작이었다.
+인스타그램의 좋아요 버튼과 똑같은 동작이다.
+사용자가 하트를 누르면 숫자가 1만큼 오르며 하트 내부에 빨간색으로 색상이 표시된다.
+
+<Image
+  src='https://bucket-zifafi.s3.ap-northeast-2.amazonaws.com/posts/optimistic_01.png'
+  alt='Image'
+  width='300'
+  height='150'
+  className='mx-auto my-6 rounded-md object-cover'
+/>
+
+기존에는 `onClick` 이벤트 핸들러로 좋아요 상태를 토글하는 API 요청을 곧바로 보냈고, 요청 성공 시 또 다시 해당 게시물 쿼리 데이터를 `refetch`하도록 되어있었다.
+하트 표시가 바뀌는데 대략 1~2초 정도의 시간이 소요되었고, 네트워크 요청이 `fetching` 중일때 또 하트를 클릭하면 해당 트리거링을 무시했다.
+따라서 사용자가 인스타그램처럼 좋아요를 빠르게 여러번 누를 수 없었고, 인터랙션이 화면에 반영되기까지 1초 내외의 시간을 기다려야했다.
+
+사용자 이탈률과 관련해서 도허티 임계값 0.4초보다 두배 이상 크기 때문에 UX 개선이 꼭 필요한 이슈라고 판단했고 본격적으로 문제를 분석해보았다.
+
+## 문제는 무엇일까?
+
+시간과 비용이라는 리소스를 들여 서버 성능을 올리고, 네트워크 속도를 개선하는것도 이 문제를 해결하는 방법 중 하나이다.
+하지만 출시도 아직 안된 초기 서비스라 서버 성능이나 인프라적인 부분은 점진적으로 상황에 맞게 확장해나가는게 좋다고 생각한다.
+확장은 쉽지만 비용 절감은 힘들기 때문이다.
+
+비용을 늘리기 싫어서 이 문제의 원인을 좀 더 세밀하게 살펴보았다.
+
+### 문제 정의
+
+이 이슈의 문제는 무엇일까?
+좋아요 클릭 시 2번의 네트워크 요청이 모두 완료되어야 화면에 반영이 되어서?
+네트워크의 속도가 느려서?
+
+내가 생각한 근본적인 문제는 서비스 사용자가 속도가 느리다는 것을 체감할만큼 인터랙션이 오래걸린다는 것이다.
+즉, "사용자가 느리다고 느낀다"로 정의할 수 있다.
+
+### 해결 방향
+
+이 문제를 해결하기 위해 **Optimistic UI**를 적용해본다.
+좋아요 클릭이라는 API 요청이 성공할 것이라는 기대하에 미리 화면에 토글된 하트를 표시해주는 것이다.
+
+추가적으로 생각한 기능도 있다.
+인스타그램은 N번 클릭 시 N번의 네트워크 요청이 실행된다.
+사용자가 빠르게 4번 클릭했다면 결국 하트의 상태는 그대로인데, 굳이 네트워크 요청을 4번 할 필요가 없다고 생각했다.
+그래서 나는 **하트 상태 변경**에 대해서 디바운싱을 적용하는 것을 생각해냈다.
+
+이렇게 문제 해결을 위하여 Optimistic UI, Debouncing 기법을 한번에 적용하기로 결정했다.
+`tanstack-query`로 관리하고 있는 서버 캐싱 데이터 정합성을 잘 고려하는게 관건이었다.
+
+## 구현 방법
+
+해당 서비스는 `React`와 `tanstack-query`, 스타일링은 `Tailwind CSS` 기반 프로젝트이다.
+
+복잡한 문제가 주어졌을때 분할 정복 방법(Divide and Conquer)을 활용하면 순차적으로 문제를 해결해나갈 수 있다.
+~~분할 정복은 알고리즘에만 사용되는 단어가 아니다.~~
+이번 구현을 위해서 아래와 같은 순서를 통해 해결해나갔다.
+
+### 클라이언트 상태로 하트 표시 구현
+
+사용자가 클릭하자마자 하트 표시 상태를 바꿔주기 위해 크게 2가지 방법을 고민했다.
+하나는 `tanstack-query`로 캐싱하고 있는 서버 데이터를 직접적으로 수정해주는 방법이었다.
+두번째 방법은 일반적인 방법으로 `useState`를 통해서 하트 표시 상태를 다루는 것이다.
+
+일반적으로 첫번째 방법이 적합하다고 생각한다.
+하지만 디바운싱을 구현하기 위한 `useDebounce`라는 커스텀 훅을 사용하기 편한점과, 서버 데이터를 직접적으로 수정하는 까다로움을 피하고자 두번째 방법을 선택했다.
+
+```tsx
+const PostComponent = () => {
+  const [likedState, setLikedState] = useState({
+    liked: defaultLikedFromQuery,
+    likedCnt: defaultLikedCntFromQuery,
+  });
+
+  const toggleLiked = () => {
+    setLikedState((prev) => ({
+      liked: !prev.liked,
+      likedCnt: prev.likedCnt + (prev.liked ? -1 : 1),
+    }));
+  };
+
+  return (
+    <button className='flex gap-2' onClick={}>
+      <IconHeart fill={likedState.liked ? 'red' : 'transparent'} />
+      <span>{likedState.likedCnt}</span>
+    </button>
+  );
+};
+```
+
+이처럼 간단하게 `useState`를 통해 하트 표시 상태와 좋아요 숫자를 표시하는 컴포넌트를 만들어 준다.
+이제 하트를 누를때마다 하트 표시 상태가 토글될 것이다.
+
+<Accordion type="multiple">
+
+<AccordionItem value='advanced'>
+<AccordionTrigger>defaultLiked에 대한 자세한 설명</AccordionTrigger>
+<AccordionContent>
+`defaultLiked`는 아래처럼 캐싱된 서버 데이터로부터 가져올 수도 있다.
+```tsx
+// 잘 설계된 쿼리키와 `getQueryData` 메서드를 활용.
+const queryClient = useQueryClient();
+const queryKey = ['post-liked', postId];
+const defaultLiked = queryClient.getQueryData<LikedType>(queryKey)
+```
+</AccordionContent>
+</AccordionItem>
+
+</Accordion>
+
+### 하트 표시 상태에 0.3초 디바운스 적용시키기
+
+위의 하트 표시 컴포넌트에 디바운스 기능을 적용한다.
+내가 사용하던 디바운스 훅은 아래와 같다.
+
+```ts
+const useDebounce = <T>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+```
+
+제너럴 타입으로 `value`를 받은 뒤 `setTimeout` Web API를 사용해서 간단하게 구현했다.
+`useDebounce`를 통해 리턴되는 `debouncedValue`는 디바운스가 적용된 값으로 아래와 같이 하트 표시 상태에 적용할 수 있었다.
+
+```tsx
+const PostComponent = () => {
+  const [likedState, setLikedState] = useState({
+    liked: defaultLikedFromQuery,
+    likedCnt: defaultLikedCntFromQuery,
+  });
+
+  const debouncedLikedState = useDebounce(likedState, 300);
+
+  const toggleLiked = () => {
+    setLikedState((prev) => ({
+      liked: !prev.liked,
+      likedCnt: prev.likedCnt + (prev.liked ? -1 : 1),
+    }));
+  };
+
+  useEffect(() => {
+    if (likedState.liked !== defaultLiked) {
+      // 하트 표시 토글 API 요청
+    }
+  }, [debouncedLikedState]);
+
+  return (
+    <button className='flex gap-2' onClick={}>
+      <IconHeart fill={likedState.liked ? 'red' : 'transparent'} />
+      <span>{likedState.likedCnt}</span>
+    </button>
+  );
+};
+```
+
+`useEffect`의 의존성 배열에 디바운싱이 적용된 하트 표시 상태값을 주입해준다.
+그러면 `debouncedLikedState`가 바뀔때마다 원하는 함수가 실행되도록 설정 할 수 있다.
+즉, `debouncedLikedState` 상태를 관찰하여 좋아요 토글 요청을 보낼지 말지 컨트롤 할 수 있다.
+
+### 최종 하트 표시 상태에 따른 컨트롤 설정
+
+디바운스에 설정한 0.3초 이후 최종 하트 표시 상태에 따라서 두가지 동작을 처리해야한다.
+
+1. 하트 표시 상태가 그대로인 경우
+
+하트를 빠르게 2번 누른 경우에 해당한다.
+이 경우에는 불필요한 API 요청을 하지 않는다.
+디바운스를 적용한 효과가 나타나는 시점이다.
+인스타그램에 디바운싱이 적용되어 있었다면 실수로 좋아요 버튼을 눌렀다가 재빠르게 취소한 사람들에게 희소식이었을지도 모르겠다.
+
+2. 하트 표시 상태가 바뀐 경우
+
+이 프로젝트의 경우 하트 표시 상태와 관련한 API가 `like`와 `unlike` 두가지로 나누어져있었다.
+만약 최종 하트 표시 상태가 `liked` 상태라면 `like` API 요청 후 서버 캐싱 데이터를 임시적으로 수정해주어야한다.
+
+```tsx
+const PostComponent = () => {
+  // Client ...
+
+  // Server Interaction
+  const queryClient = useQueryClient();
+  const queryKey = ['post-liked', postId];
+
+  const { mutate: like } = () => {
+    return useMutation<Response, Error, number>({
+      mutationFn: async (postId) => {
+        const result = await axios.post<Response>(
+          `/api-path/like`, {
+            postId
+          }
+        );
+        return result.data;
+      },
+    });
+  };
+
+  const toggleLikedState = () => {
+    if (likedState.liked) {
+      like(postId, {
+        onSuccess: async () => {
+          await queryClient.cancelQueries({ queryKey });
+          const prev = queryClient.getQueryData<LikedType>(queryKey);
+          if (prev) {
+            queryClient.setQueryData<LikedType>(queryKey, {
+              ...prev,
+              liked: likedState.liked,
+              likeCnt: likedState.likedCnt,
+            });
+          }
+        },
+        onError: (error) => {
+          // 클라이언트 상태 원상 복구
+          setLikedState({
+            liked: defaultLiked,
+            likedCnt: defaultLikedCnt,
+          });
+          // + 에러 처리 로직
+        },
+        onSettled: async () => {
+          await queryClient.invalidateQueries({ queryKey });
+        },
+      });
+    }
+
+    if (!likedState.liked) {
+      // 좋아요 취소 - like와 같은 로직
+    }
+  }
+
+  // Client <-> Server 경계
+  useEffect(() => {
+    if (likedState.liked !== defaultLiked) {
+      toggleLikedState();
+    }
+  }, [debouncedLikedState]);
+
+  return (
+    // ...
+  );
+};
+```
+
+`tanstack-query`를 사용하고 있으니 `post`, `put`과 같은 요청을 `useMutation`으로 구현했다.
+그리고 like, unlike 판별 및 API 요청 로직은 `toggleLikedState`라는 함수 내부로 묶어두었다.
+만약 mutation 요청이 실패한 경우 클라이언트의 상태를 원래대로 복구해야한다.
+
+이 단계에서 리액트 쿼리와 관련한 cancelQueries와 invalidate 개념이 중요하다.
+cancelQueries로 현재 진행 중인 쿼리를 취소, 네트워크 요청을 중단하기 위해 사용한다.
+그 직후 직접 쿼리 데이터를 수정한다.
+onSettled 시점에는 해당 쿼리를 무효화(invalidateQueries)하여 다음 사이클에 최신 데이터를 보장하기 위해서 설정하였다.
+
+### 최종 코드
+
+<Image
+  src='https://bucket-zifafi.s3.ap-northeast-2.amazonaws.com/posts/optimistic_03.gif'
+  alt='Image'
+  width='800'
+  height='150'
+  className='mx-auto my-6 rounded-md object-cover'
+/>
+
+이제 위와같이 빠른 속도로 좋아요가 화면에 반영된다.
+또한 디바운스가 적용되어서 불필요한 네트워크 요청도 줄일 수 있었다.
+
+<Accordion type="multiple">
+
+<AccordionItem value='advanced'>
+<AccordionTrigger>최종 코드</AccordionTrigger>
+<AccordionContent>
+
+```tsx
+const PostComponent = () => {
+  // Client Side
+  const [likedState, setLikedState] = useState({
+    liked: defaultLikedFromQuery,
+    likedCnt: defaultLikedCntFromQuery,
+  });
+
+  const debouncedLikedState = useDebounce(likedState, 300);
+
+  const toggleLiked = () => {
+    setLikedState((prev) => ({
+      liked: !prev.liked,
+      likedCnt: prev.likedCnt + (prev.liked ? -1 : 1),
+    }));
+  };
+
+  // 클라이언트 상태 원상 복구
+  const restoreLikedState = () => {
+    setLikedState({
+      liked: defaultLiked,
+      likedCnt: defaultLikedCnt,
+    });
+  };
+
+  // Server Interaction
+  const queryClient = useQueryClient();
+  const queryKey = ['post-liked', postId];
+
+  const {
+    mutate: like,
+  } = () => {
+    return useMutation<Response, Error, number>({
+      mutationFn: async (postId) => {
+        const result = await axios.post<Response>(`/api-path/like`, {
+          postId,
+        });
+        return result.data;
+      },
+    });
+  };
+
+  // Optimistic UI 구현부 (쿼리 중지 + 쿼리 데이터 수정)
+  const setLikedStateQueryData = async () => {
+    await queryClient.cancelQueries({ queryKey });
+    const prev = queryClient.getQueryData<LikedType>(queryKey);
+    if (prev) {
+      queryClient.setQueryData<LikedType>(queryKey, {
+        ...prev,
+        liked: likedState.liked,
+        likeCnt: likedState.likedCnt,
+      });
+    }
+  };
+
+  const toggleLikedState = () => {
+    if (likedState.liked) {
+      like(postId, {
+        onSuccess: async () => {
+          await setLikedStateQueryData();
+        },
+        onError: (error) => {
+          restoreLikedState();
+        },
+        onSettled: async () => {
+          await queryClient.invalidateQueries({ queryKey });
+        },
+      });
+    }
+
+    if (!likedState.liked) {
+      // 좋아요 취소 - like와 같은 로직
+    }
+  };
+
+  // Client <-> Server 경계
+  useEffect(() => {
+    if (likedState.liked !== defaultLiked) {
+      toggleLikedState();
+    }
+  }, [debouncedLikedState]);
+
+  return (
+    <button className='flex gap-2' onClick={}>
+      <IconHeart fill={likedState.liked ? 'red' : 'transparent'} />
+      <span>{likedState.likedCnt}</span>
+    </button>
+  );
+};
+```
+
+</AccordionContent>
+</AccordionItem>
+
+</Accordion>
+
+## 한계점과 결론
+
+<Image
+  src='https://bucket-zifafi.s3.ap-northeast-2.amazonaws.com/posts/optimistic_02.gif'
+  alt='Image'
+  width='300'
+  height='150'
+  className='mx-auto my-6 rounded-md object-cover'
+/>
+
+이처럼 사용자 입장에서 즉각적인 UI 피드백을 제공할 수 있게 되었다.
+간단한 기법을 적용해서 사용자의 이탈률을 줄일 수 있는게 프론트엔드 개발의 묘미가 아닐까.
+
+도허티 임계값 기준인 0.4초를 고려하여 디바운스 시간값을 0.3초로 설정했는데, 지금 시점에는 0.1초도 괜찮을것 같다고 생각한다.
+잘 없겠지만 사용자가 좋아요 클릭 직후 디바운싱에 설정된 시간보다 더 빠르게 페이지 이탈할 경우에 API 요청이 증발되기 떄문에 그렇다.
+
+또한 디바운스로 인해서 서버 데이터에 의한 하트 상태 표시가 아닌 부분이 고민이 많이 된다.
+like, dislike의 `onSuccess` 부분의 Optimistic UI 구현부 코드는 사실상 없어도 상관없다.
+
+결론적으로 기능을 구현했지만, 글을 쓰다보니 아쉬운 부분들이 하나 둘씩 발견되어서 찝찝하게 마무리한다.

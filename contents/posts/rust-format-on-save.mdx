@@ -1,0 +1,61 @@
+---
+title: VSCode에서 Rust 자동 정렬 설정하는 방법
+date: 2024-08-11
+description: VSCode에서 Rust 파일 저장 시 자동 정렬 설정하기
+tags: ['Rust', 'VSCode', 'Prittier', 'Format on Save', '자동정렬', '러스트', '프리티어']
+---
+
+## Overview
+
+VScode에서 Rust 환경설정을 하면서 자동정렬이 안되는 문제를 겪었다.
+VSCode의 Setting에 `Format On Save`가 true로 설정되어있고, `cargo fmt` 명령어도 정상적으로 작동했다.
+
+하지만 파일 저장 시에 자동적으로 적용이 안되었고 공유하고자 기록해두려고 한다.
+
+## rustfmt 설치
+
+rustfmt는 Rust 팀에서 개발하고 관리하는 공식 코드 포맷터이다.
+Rust의 코드 포맷터 `rustfmt`가 설치되어 있지 않다면 다음 명령어로 설치를 진행하자.
+
+`rustup component add rustfmt`
+
+## VSCode 설정하기
+
+아마 `Format On Save`가 체크되어 있는데도 코드 포맷팅이 자동으로 안되는 사람들이 이 글을 찾아왔을거라고 생각한다.
+그래서 해당 설정은 당연히 되어있을것이라고 보고, 직접 `settings.json` 수정하는 방법을 소개한다.
+
+1. `settings.json` 설정 파일 열기
+
+VSCode에서 `cmd` + `shift` + `p` 로 Command Palette 열고 settings 검색한다.
+그리고 `Preferences: Open User Settings (json)`를 클릭하면 설정 파일을 열 수 있다.
+
+<AspectRatio
+  ratio={16 / 9}
+  className='max-x-[320px] flex items-center justify-center overflow-hidden px-8 py-4'>
+  <Image
+    src='https://bucket-zifafi.s3.ap-northeast-2.amazonaws.com/posts/rust-format-on-save-01.png'
+    alt='Image'
+    width='1600'
+    height='900'
+    className='w-full rounded-md object-cover'
+  />
+</AspectRatio>
+
+2. Rust 자동 정렬 설정 추가하기
+
+아래의 설정 값을 `settings.json` 설정 파일에 추가해준다.
+
+```bash
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "rust-analyzer.rustfmt.enableRangeFormatting": true,
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true
+    },
+```
+
+기본적으로 `"editor.formatOnSave": true,`은 작성되어 있을것이다.
+`[rust]`로 된 부분을 잘 추가해준 뒤 설정 파일을 저장하면 된다.
+
+이제 rust 파일을 열고 저장을 하면 코드 포맷팅이 잘 작동할 것이다.
